@@ -144,27 +144,36 @@ procedure Simulator is
     function From_O (O : Origin_T; H : Natural; W : Natural) return Int_Tuple_T is
     begin
         case O is
-            when Top_Left     => return (0,      0);
-            when Bottom_Left  => return (-H,     0);
-            when Center       => return (-H/2,-W/2);
-            when Bottom_Right => return (-H,    -W);
-            when Top_Right    => return (0,     -W);
+            when Top_Left     => return (0,       0);
+            when Bottom_Left  => return (-H,      0);
+            when Center       => return (-H/2, -W/2);
+            when Bottom_Right => return (-H,     -W);
+            when Top_Right    => return (0,      -W);
         end case;
     end;
+
+    type Proc_Line_Param_T is array (Natural range <>) of Natural;
+    type Proc_Image_T (Count : Natural) is new Component_T with record
+        Leading_Spaces : Proc_Line_Param_T (1 .. Count);
+        Periods        : Proc_Line_Param_T (1 .. Count);
+    end record;
     
     type Mover_T is new System_T with null record;
     procedure Execute (Self : Mover_T;
                        Dt   : Duration; 
                        E    : in out Entity_T; 
                        ES   : Entities_T := Entities_T'(1 .. 0 => null)) is
-        T renames Transform_T        (E.Get_Components (Transform_T'Tag)(0).all);
-        B renames Body_T             (E.Get_Components (Body_T'Tag)(0).all);
-        S renames Shuttle_Controls_T (E.Get_Components (Shuttle_Controls_T'Tag)(0).all);
-        FB renames PImage_T          (ES(0).Get_Components (PImage_T'Tag)(0).all);
+        T   renames Transform_T        (E.Get_Components (Transform_T'Tag)(0).all);
+        B   renames Body_T             (E.Get_Components (Body_T'Tag)(0).all);
+        S   renames Shuttle_Controls_T (E.Get_Components (Shuttle_Controls_T'Tag)(0).all);
+        FB0 renames PImage_T           (ES(0).Get_Components (PImage_T'Tag)(0).all);
         Step : Float := Float (Dt);
+        FX   : Float := S.Sequence (S.Idx).Thrust_X;
+        FY   : Float := S.Sequence (S.Idx).Thrust_Y;
+        TopY : Float := Float (FB0.Image'Last (1));
     begin
-        T.X := B.X0 + B.VX0 * Step + S.Sequence (S.Idx).Thrust_X / (2.0 * B.Mass) * Step**2;
-        T.Y := Float (FB.Image'Last (1)) - (B.Y0 + B.VY0 * Step + S.Sequence (S.Idx).Thrust_Y / (2.0 * B.Mass) * Step**2 - 0.5 * 9.8 * Step**2);
+        T.X := B.X0 + B.VX0 * Step + FX / (2.0 * B.Mass) * Step**2;
+        T.Y := TopY - (B.Y0 + B.VY0 * Step + FY / (2.0 * B.Mass) * Step**2 - 0.5 * 9.8 * Step**2);
     end;
 
     type Drawer_T is new System_T with null record;
@@ -175,12 +184,12 @@ procedure Simulator is
         Imgs  :           Components_T := E.Get_Components (Image_T'Tag);
         Trans :           Components_T := E.Get_Components (Transform_T'Tag);
         Color_Map renames Color_Map_T    (E.Get_Components (Color_Map_T'Tag)(0).all);
-        FB        renames PImage_T       (ES(0).Get_Components (PImage_T'Tag)(0).all);
+        FB0       renames PImage_T       (ES(0).Get_Components (PImage_T'Tag)(0).all);
 
         function Within_Y (Y : Integer) return Boolean is 
-            (Y >= FB.Image'First (1) and Y <= FB.Image'Last (1));
+            (Y >= FB0.Image'First (1) and Y <= FB0.Image'Last (1));
         function Within_X (X : Integer) return Boolean is 
-            (X >= FB.Image'First (2) and X <= FB.Image'Last (2));
+            (X >= FB0.Image'First (2) and X <= FB0.Image'Last (2));
     begin
         for I in Imgs'Range loop
             declare
@@ -196,8 +205,8 @@ procedure Simulator is
                             X      : Integer     := Integer (T.X) + Offset (2) + C;
                         begin
                             if Char /= ',' and Within_Y (Y) and Within_X (X) then
-                                FB.Image (Y, X).Char := Char;
-                                FB.Image (Y, X).Color := Colors (Color_Map.CM (Char));
+                                FB0.Image (Y, X).Char := Char;
+                                FB0.Image (Y, X).Color := Colors (Color_Map.CM (Char));
                             end if;
                         end;
                     end loop;
@@ -207,6 +216,47 @@ procedure Simulator is
     end;
 
     Drawer_Sys : aliased Drawer_T;
+
+    type Grader_T is new System_T with null record;
+    procedure Execute (Self : Grader_T;
+                       Dt   : Duration; 
+                       E    : in out Entity_T; 
+                       ES   : Entities_T := Entities_T'(1 .. 0 => null)) is
+        T   renames Transform_T  (E.Get_Components (Transform_T'Tag)(0).all);
+        CM  renames Color_Map_T  (E.Get_Components (Color_Map_T'Tag)(0).all);
+        PRI renames Proc_Image_T (E.Get_Components (Proc_Image_T'Tag)(0).all);
+        FB0 renames PImage_T     (ES(0).Get_Components (PImage_T'Tag)(0).all);
+
+        function Line (LS : Natural; P : Natural; W: Natural) return Char_Image_T is
+            use Ada.Strings.Fixed;
+            CI : Char_Image_T (1 .. 1, 1 .. W) := (others => (others => ' '));
+        begin
+            if P /= 0 then
+                declare
+                    Seq : String := (LS * " ") & ((W + P) / P) * ("." & ((P - 1) * " "));
+                begin
+                    for I in CI'Range (2) loop
+                        CI (1, I) := Seq (I);
+                    end loop;
+                end;
+            end if;
+            return CI;
+        end;
+    begin
+        
+        for I in 1 .. PRI.Count loop
+            declare
+                L : Char_Image_T := Line (PRI.Leading_Spaces (I), PRI.Periods (I), FB0.W);
+                Gradient_Line : Entity_T := (2,
+                                             Id         => "GradL",
+                                             Components => (0 => new Transform_T' (X => 0.0, Y => Float (I)),
+                                                            1 => new Image_T' (1, FB0.W, L, Bottom_Left),
+                                                            2 => CM'Access));
+            begin
+                Execute (Drawer_Sys, Dt, Gradient_Line, ES);
+            end;
+        end loop;
+    end;
 
     type Animator_T is new System_T with null record;
     procedure Execute (Self : Animator_T;
@@ -237,11 +287,11 @@ procedure Simulator is
                        Dt   : Duration; 
                        E    : in out Entity_T; 
                        ES   : Entities_T := Entities_T'(1 .. 0 => null)) is
-        Imgs :     Components_T :=     E.Get_Components (Image_T'Tag);
-        Maps :     Components_T :=     E.Get_Components (Color_Map_T'Tag);
-        SR renames Random_Stars_T     (E.Get_Components (Random_Stars_T'Tag)(0).all);
-        FB renames PImage_T           (ES (0).Get_Components (PImage_T'Tag)(0).all);
-        S  renames Shuttle_Controls_T (ES (1).Get_Components (Shuttle_Controls_T'Tag)(0).all);
+        Imgs :      Components_T :=     E.Get_Components (Image_T'Tag);
+        Maps :      Components_T :=     E.Get_Components (Color_Map_T'Tag);
+        SR  renames Random_Stars_T     (E.Get_Components (Random_Stars_T'Tag)(0).all);
+        FB0 renames PImage_T           (ES (0).Get_Components (PImage_T'Tag)(0).all);
+        S   renames Shuttle_Controls_T (ES (1).Get_Components (Shuttle_Controls_T'Tag)(0).all);
 
         function Random (Min : Natural; Max : Natural) return Natural is
             subtype R is Natural range Min .. Max;
@@ -256,8 +306,8 @@ procedure Simulator is
             for I in 1 .. SR.I'Length loop
                 declare
                     Idx : Natural := Random (0, Imgs'Length - 1);
-                    RX  : Natural := Random (FB.Image'First (2), FB.Image'Last (2));
-                    RY  : Natural := Random (FB.Image'First (1), FB.Image'Last (1));
+                    RX  : Natural := Random (FB0.Image'First (2), FB0.Image'Last (2));
+                    RY  : Natural := Random (FB0.Image'First (1), FB0.Image'Last (1));
                 begin
                     SR.I (I) := Idx;
                     SR.T (I) := (Float (RX), float (RY));
@@ -324,15 +374,15 @@ procedure Simulator is
         T    renames Transform_T (E.Get_Components (Transform_T'Tag)(0).all);
         Img  renames Image_T     (E.Get_Components (Image_T'Tag)(0).all);
         CMap renames Color_Map_T (E.Get_Components (Color_Map_T'Tag)(0).all); 
-        FB   renames PImage_T    (ES(0).Get_Components (PImage_T'Tag)(0).all);
+        FB0   renames PImage_T   (ES(0).Get_Components (PImage_T'Tag)(0).all);
         Offset : Int_Tuple_T := From_O (Img.O, Img.H, Img.W);
     begin
         for R in Img.Image'Range (1) loop
             for C in Img.Image'Range (2) loop
-                FB.Image (Integer (T.Y) + Offset (1) + R, 
-                          Integer (T.X) + Offset (2) + C).Char := Img.Image (R, C);
-                FB.Image (Integer (T.Y) + Offset (1) + R, 
-                          Integer (T.X) + Offset (2) + C).Color := Colors (CMap.CM (Img.Image (R, C)));
+                FB0.Image (Integer (T.Y) + Offset (1) + R, 
+                           Integer (T.X) + Offset (2) + C).Char := Img.Image (R, C);
+                FB0.Image (Integer (T.Y) + Offset (1) + R, 
+                           Integer (T.X) + Offset (2) + C).Color := Colors (CMap.CM (Img.Image (R, C)));
             end loop;
         end loop;
     end;
@@ -465,16 +515,6 @@ procedure Simulator is
                                         Id => "Frbuf",
                                         Components => (0 => new PImage_T'(Height, Width, (others => (others => (Colors (Gray), '.')))),
                                                        1 => new PImage_T'(Height, Width, (others => (others => (Colors (Gray), ','))))));
-
-
-
-
-    type Proc_Line_Param_T is array (Natural range <>) of Natural;
-    type Proc_Image_T (Count : Natural) is new Component_T with record
-        Leading_Spaces : Proc_Line_Param_T (1 .. Count);
-        Periods        : Proc_Line_Param_T (1 .. Count);
-    end record;
-
     Bgd_Gradient : Entity_T := (2,
                                 Id         => "BgdGr",
                                 Components => (0 => new Transform_T'(X => 0.0, Y => 0.0),
@@ -483,47 +523,6 @@ procedure Simulator is
                                                     Leading_Spaces => (0,0,0,0,4,0,0,0,0,0,0,2,0,0,0,0,0,2,0,0,0,2,0,0,0,2,0,1,0,0,0,0,0,0,0,0),
                                                     Periods        => (8,0,0,0,8,0,0,0,4,0,0,4,0,0,4,0,0,4,0,4,0,4,0,4,0,4,2,2,1,1,1,1,1,1,1,1)),
                                                2 => new Color_Map_T'(CM => Colors_Map_T'(others => Gray))));
-
-    type Grader_T is new System_T with null record;
-    procedure Execute (Self : Grader_T;
-                       Dt   : Duration; 
-                       E    : in out Entity_T; 
-                       ES   : Entities_T := Entities_T'(1 .. 0 => null)) is
-        T  renames Transform_T  (E.Get_Components (Transform_T'Tag)(0).all);
-        CM renames Color_Map_T  (E.Get_Components (Color_Map_T'Tag)(0).all);
-        PI renames Proc_Image_T (E.Get_Components (Proc_Image_T'Tag)(0).all);
-        FB renames PImage_T     (ES(0).Get_Components (PImage_T'Tag)(0).all);
-
-        function Line (LS : Natural; P : Natural; W: Natural) return Char_Image_T is
-            use Ada.Strings.Fixed;
-            CI : Char_Image_T (1 .. 1, 1 .. W) := (others => (others => ' '));
-        begin
-            if P /= 0 then
-                declare
-                    Seq : String := (LS * " ") & ((W + P) / P) * ("." & ((P - 1) * " "));
-                begin
-                    for I in CI'Range (2) loop
-                        CI (1, I) := Seq (I);
-                    end loop;
-                end;
-            end if;
-            return CI;
-        end;
-    begin
-        
-        for I in 1 .. PI.Count loop
-            declare
-                L : Char_Image_T := Line (PI.Leading_Spaces (I), PI.Periods (I), FB.W);
-                Gradient_Line : Entity_T := (2,
-                                             Id         => "GradL",
-                                             Components => (0 => new Transform_T' (X => 0.0, Y => Float (I)),
-                                                            1 => new Image_T' (1, FB.W, L, Bottom_Left),
-                                                            2 => CM'Access));
-            begin
-                Execute (Drawer_Sys, Dt, Gradient_Line, ES);
-            end;
-        end loop;
-    end;
 
     Mover_Sys           : Mover_T;
     Grader_Sys          : Grader_T;
@@ -536,8 +535,8 @@ procedure Simulator is
     Start : Time := Clock;
 begin
     declare
-        S  renames Shuttle_Controls_T (Shuttle.Get_Components (Shuttle_Controls_T'Tag)(0).all);
-        FB renames PImage_T           (Frame_Buffer.Get_Components (PImage_T'Tag)(0).all);
+        S   renames Shuttle_Controls_T (Shuttle.Get_Components (Shuttle_Controls_T'Tag)(0).all);
+        FB0 renames PImage_T           (Frame_Buffer.Get_Components (PImage_T'Tag)(0).all);
     begin
         for Idx in Sequence_Idx_T'Range loop
             S.Idx := Idx;
@@ -551,9 +550,9 @@ begin
             Execute (Boxer_Sys,    Duration(Idx), Window_Box,   Entities_T'(0 => Frame_Buffer'Access));
             Execute (Titler_Sys,   Duration(Idx), Title,        Entities_T'(0 => Frame_Buffer'Access));
             Execute (Renderer_Sys, Duration(Idx), Frame_Buffer);
-            delay 0.2;
+            delay 0.15;
         end loop;
-        Put (Move_Cursor (FB.Image'Last (1), FB.Image'Last (2)));
+        Put (Move_Cursor (FB0.Image'Last (1), FB0.Image'Last (2)));
         New_Line;
     end;
 end Simulator;
