@@ -284,10 +284,10 @@ procedure Simulator is
                        Dt   : Duration; 
                        E    : in out Entity_T; 
                        ES   : Entities_T := Entities_T'(1 .. 0 => null)) is
-        T renames Transform_T (E.Get_Components (Transform_T'Tag)(0).all);
-        FB0 renames PImage_T (ES(0).Get_Components (PImage_T'Tag)(0).all);
-        Box renames Box_T (E.Get_Components (Box_T'Tag)(0).all);
+        T    renames Transform_T (E.Get_Components (Transform_T'Tag)(0).all);
+        Box  renames Box_T       (E.Get_Components (Box_T'Tag)(0).all);
         CMap renames Color_Map_T (E.Get_Components (Color_Map_T'Tag)(0).all); 
+        FB0  renames PImage_T    (ES(0).Get_Components (PImage_T'Tag)(0).all);
 
         use Ada.Strings.Fixed;
 
@@ -422,7 +422,7 @@ procedure Simulator is
                                                                       others          => Gray))));
     Saturn : Entity_T := (2,
                           Id => "Satrn",
-                          Components => (0 => new Transform_T'(X => 40.0, Y => 10.0),
+                          Components => (0 => new Transform_T'(X => 50.0, Y => 10.0),
                                          1 => new Image_T'(5, 15, (".-..='``'=.,,,,",
                                                                    "'=/_       \,,,",
                                                                    ",|  '=._    |,,",
@@ -542,15 +542,15 @@ begin
     begin
         for Idx in Sequence_Idx_T'Range loop
             S.Idx := Idx;
-            Execute (Grader_Sys,   Duration(Idx), Bgd_Gradient,    Entities_T'(0 => Frame_Buffer'Access));
-            Execute (Mover_Sys,    Duration(Idx), Shuttle,    Entities_T'(0 => Frame_Buffer'Access));
-            Execute (Star_Sys,     Duration(Idx), Stars,      Entities_T'(0 => Frame_Buffer'Access, 1 => Shuttle'Access));
-            Execute (Drawer_Sys,   Duration(Idx), Horizon,    Entities_T'(0 => Frame_Buffer'Access));
-            Execute (Drawer_Sys,   Duration(Idx), Saturn,     Entities_T'(0 => Frame_Buffer'Access));
-            Execute (Drawer_Sys,   Duration(Idx), Shuttle,    Entities_T'(0 => Frame_Buffer'Access));
-            Execute (Animator_Sys, Duration(Idx), Shuttle,    Entities_T'(0 => Frame_Buffer'Access));
-            Execute (Boxer_Sys,    Duration(Idx), Window_Box, Entities_T'(0 => Frame_Buffer'Access));
-            Execute (Titler_Sys,   Duration(Idx), Title,      Entities_T'(0 => Frame_Buffer'Access));
+            Execute (Grader_Sys,   Duration(Idx), Bgd_Gradient, Entities_T'(0 => Frame_Buffer'Access));
+            Execute (Mover_Sys,    Duration(Idx), Shuttle,      Entities_T'(0 => Frame_Buffer'Access));
+            Execute (Star_Sys,     Duration(Idx), Stars,        Entities_T'(0 => Frame_Buffer'Access, 1 => Shuttle'Access));
+            Execute (Drawer_Sys,   Duration(Idx), Horizon,      Entities_T'(0 => Frame_Buffer'Access));
+            Execute (Drawer_Sys,   Duration(Idx), Saturn,       Entities_T'(0 => Frame_Buffer'Access));
+            Execute (Drawer_Sys,   Duration(Idx), Shuttle,      Entities_T'(0 => Frame_Buffer'Access));
+            Execute (Animator_Sys, Duration(Idx), Shuttle,      Entities_T'(0 => Frame_Buffer'Access));
+            Execute (Boxer_Sys,    Duration(Idx), Window_Box,   Entities_T'(0 => Frame_Buffer'Access));
+            Execute (Titler_Sys,   Duration(Idx), Title,        Entities_T'(0 => Frame_Buffer'Access));
             Execute (Renderer_Sys, Duration(Idx), Frame_Buffer);
             delay 0.2;
         end loop;
