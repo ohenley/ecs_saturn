@@ -243,7 +243,6 @@ procedure Simulator is
             return CI;
         end;
     begin
-        
         for I in 1 .. PRI.Count loop
             declare
                 L : Char_Image_T := Line (PRI.Leading_Spaces (I), PRI.Periods (I), FB0.W);
@@ -263,9 +262,9 @@ procedure Simulator is
                        Dt   : Duration; 
                        E    : in out Entity_T; 
                        ES   : Entities_T := Entities_T'(1 .. 0 => null)) is
-        S renames Shuttle_Controls_T (E.Get_Components (Shuttle_Controls_T'Tag)(0).all);
+        SC renames Shuttle_Controls_T (E.Get_Components (Shuttle_Controls_T'Tag)(0).all);
     begin
-        if S.Idx /= Sequence_Idx_T'First and S.Idx /= Sequence_Idx_T'Last then
+        if SC.Idx /= Sequence_Idx_T'First and SC.Idx /= Sequence_Idx_T'Last then
             declare
                 A renames Animation_T (E.Get_Components (Animation_T'Tag)(0).all);
                 T renames Transform_T (E.Get_Components (Transform_T'Tag)(0).all);
@@ -291,7 +290,7 @@ procedure Simulator is
         Maps :      Components_T :=     E.Get_Components (Color_Map_T'Tag);
         SR  renames Random_Stars_T     (E.Get_Components (Random_Stars_T'Tag)(0).all);
         FB0 renames PImage_T           (ES (0).Get_Components (PImage_T'Tag)(0).all);
-        S   renames Shuttle_Controls_T (ES (1).Get_Components (Shuttle_Controls_T'Tag)(0).all);
+        SC  renames Shuttle_Controls_T (ES (1).Get_Components (Shuttle_Controls_T'Tag)(0).all);
 
         function Random (Min : Natural; Max : Natural) return Natural is
             subtype R is Natural range Min .. Max;
@@ -302,7 +301,7 @@ procedure Simulator is
             return Rand.Random (Gen);
         end;
     begin
-        if S.Idx = Sequence_Idx_T'First then
+        if SC.Idx = Sequence_Idx_T'First then
             for I in 1 .. SR.I'Length loop
                 declare
                     Idx : Natural := Random (0, Imgs'Length - 1);
