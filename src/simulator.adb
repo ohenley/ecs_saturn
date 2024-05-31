@@ -18,7 +18,7 @@ procedure Simulator is
         Components : Components_T (0 .. Count);
     end record;
     type Entity_Access is access all Entity_T'Class;
-    type Entities_T is array (Natural range <>) of Entity_Access;
+    type Entities_T    is array (Natural range <>) of Entity_Access;
 
     function Get_Components (E: Entity_T'Class; Tag: Ada.Tags.Tag) return Components_T is
         Count : Natural := 0;
@@ -47,8 +47,6 @@ procedure Simulator is
                        ES   : Entities_T := Entities_T'(1 .. 0 => null)) is abstract;
     type System_Access is access all System_T'Class;
 
-
-
     type Transform_T is new Component_T with record
         X, Y : Float;
     end record;
@@ -59,24 +57,24 @@ procedure Simulator is
     type Char_Image_Access is access all Char_Image_T;
     type Image_T (H : Natural; W : Natural) is new Component_T with record
         Image : Char_Image_T (1 .. H, 1 .. W);
-        O : Origin_T;
+        O     : Origin_T;
     end record;
     type Image_Access is access all Image_T;
 
     type Anim_Count_T is mod 2;
     type Frames_T is array (Anim_Count_T) of Image_Access;
     type Animation_T is new Component_T with record
-        Frames : Frames_T;
+        Frames  : Frames_T;
         Current : Anim_Count_T;
     end record;
 
     type Body_T is new Component_T with record
-        X0  : Float := 18.0;
-        Y0  : Float := 3.0;
-        VX0 : Float := 1.0;
-        VY0 : Float := 2.0;
-        FX  : Float := 1.0;
-        FY  : Float := 0.0;
+        X0   : Float := 18.0;
+        Y0   : Float := 3.0;
+        VX0  : Float := 1.0;
+        VY0  : Float := 2.0;
+        FX   : Float := 1.0;
+        FY   : Float := 0.0;
         Mass : Float := 2_000_000.0;
     end record;
 
@@ -88,7 +86,7 @@ procedure Simulator is
     type Controls_T is array (Sequence_Idx_T'Range) of Control_T;
     type Shuttle_Controls_T is new Component_T with record
         Sequence : Controls_T;
-        Idx  : Sequence_Idx_T;
+        Idx      : Sequence_Idx_T;
     end record;
 
     type Color_Name_T is (White, Gray, Light_Gray, Green, Blue, Yellow, Magenta, Pink, Orange);
@@ -139,11 +137,11 @@ procedure Simulator is
     type Box_Map_T is array (Line_Types_T) of Character;
     type Box_T is new Component_T with record
         Box_Map : Box_Map_T;
-        H, W : Natural;
+        H, W    : Natural;
     end record;
 
     type Int_Tuple_T is array (1 .. 2) of Integer;
-    function From_O (O : Origin_T ; H : Natural; W : Natural) return Int_Tuple_T is
+    function From_O (O : Origin_T; H : Natural; W : Natural) return Int_Tuple_T is
     begin
         case O is
             when Top_Left     => return (0,      0);
@@ -174,10 +172,10 @@ procedure Simulator is
                        Dt   : Duration; 
                        E    : in out Entity_T; 
                        ES   : Entities_T := Entities_T'(1 .. 0 => null)) is
-        Imgs  : Components_T := E.Get_Components (Image_T'Tag);
-        Trans : Components_T := E.Get_Components (Transform_T'Tag);
-        Color_Map renames Color_Map_T (E.Get_Components (Color_Map_T'Tag)(0).all);
-        FB        renames PImage_T    (ES(0).Get_Components (PImage_T'Tag)(0).all);
+        Imgs  :           Components_T := E.Get_Components (Image_T'Tag);
+        Trans :           Components_T := E.Get_Components (Transform_T'Tag);
+        Color_Map renames Color_Map_T    (E.Get_Components (Color_Map_T'Tag)(0).all);
+        FB        renames PImage_T       (ES(0).Get_Components (PImage_T'Tag)(0).all);
 
         function Within_Y (Y : Integer) return Boolean is 
             (Y >= FB.Image'First (1) and Y <= FB.Image'Last (1));
@@ -194,8 +192,8 @@ procedure Simulator is
                         declare
                             Char   : Character   := Img.Image (R, C);
                             Offset : Int_Tuple_T := From_O (Img.O, Img.H, Img.W);
-                            Y : Integer := Integer (T.Y) + Offset (1) + R;
-                            X : Integer := Integer (T.X) + Offset (2) + C;
+                            Y      : Integer     := Integer (T.Y) + Offset (1) + R;
+                            X      : Integer     := Integer (T.X) + Offset (2) + C;
                         begin
                             if Char /= ',' and Within_Y (Y) and Within_X (X) then
                                 FB.Image (Y, X).Char := Char;
@@ -239,11 +237,11 @@ procedure Simulator is
                        Dt   : Duration; 
                        E    : in out Entity_T; 
                        ES   : Entities_T := Entities_T'(1 .. 0 => null)) is
-        Imgs : Components_T := E.Get_Components (Image_T'Tag);
-        Maps : Components_T := E.Get_Components (Color_Map_T'Tag);
-        SR renames Random_Stars_T (E.Get_Components (Random_Stars_T'Tag)(0).all);
-        FB renames PImage_T (ES (0).Get_Components (PImage_T'Tag)(0).all);
-        S renames Shuttle_Controls_T (ES (1).Get_Components (Shuttle_Controls_T'Tag)(0).all);
+        Imgs :     Components_T :=     E.Get_Components (Image_T'Tag);
+        Maps :     Components_T :=     E.Get_Components (Color_Map_T'Tag);
+        SR renames Random_Stars_T     (E.Get_Components (Random_Stars_T'Tag)(0).all);
+        FB renames PImage_T           (ES (0).Get_Components (PImage_T'Tag)(0).all);
+        S  renames Shuttle_Controls_T (ES (1).Get_Components (Shuttle_Controls_T'Tag)(0).all);
 
         function Random (Min : Natural; Max : Natural) return Natural is
             subtype R is Natural range Min .. Max;
@@ -258,8 +256,8 @@ procedure Simulator is
             for I in 1 .. SR.I'Length loop
                 declare
                     Idx : Natural := Random (0, Imgs'Length - 1);
-                    RX : Natural := Random (FB.Image'First (2), FB.Image'Last (2));
-                    RY : Natural := Random (FB.Image'First (1), FB.Image'Last (1));
+                    RX  : Natural := Random (FB.Image'First (2), FB.Image'Last (2));
+                    RY  : Natural := Random (FB.Image'First (1), FB.Image'Last (1));
                 begin
                     SR.I (I) := Idx;
                     SR.T (I) := (Float (RX), float (RY));
@@ -323,10 +321,10 @@ procedure Simulator is
                        Dt   : Duration; 
                        E    : in out Entity_T; 
                        ES   : Entities_T := Entities_T'(1 .. 0 => null)) is
-        T   renames Transform_T (E.Get_Components (Transform_T'Tag)(0).all);
-        Img renames Image_T     (E.Get_Components (Image_T'Tag)(0).all);
-        FB  renames PImage_T    (ES(0).Get_Components (PImage_T'Tag)(0).all);
+        T    renames Transform_T (E.Get_Components (Transform_T'Tag)(0).all);
+        Img  renames Image_T     (E.Get_Components (Image_T'Tag)(0).all);
         CMap renames Color_Map_T (E.Get_Components (Color_Map_T'Tag)(0).all); 
+        FB   renames PImage_T    (ES(0).Get_Components (PImage_T'Tag)(0).all);
         Offset : Int_Tuple_T := From_O (Img.O, Img.H, Img.W);
     begin
         for R in Img.Image'Range (1) loop
@@ -354,9 +352,9 @@ procedure Simulator is
         FB1 renames PImage_T (E.Get_Components (PImage_T'Tag)(1).all);
 
         function Hide_Cursor return String is (ESC & "[?25l");
-        function Text_Color return String  is (ESC & "[38;2");
-        function Reset return String is (ESC & "[0m");
-        function Terminator return String is ("m"); 
+        function Text_Color  return String is (ESC & "[38;2");
+        function Reset       return String is (ESC & "[0m");
+        function Terminator  return String is ("m"); 
 
         function C_To_S (C : Channel) return String is
             type U8 is mod 256;
@@ -383,7 +381,7 @@ procedure Simulator is
         FB0.Image := (others => (others => (Colors (Gray), '.')));
     end;
 
-    Width : constant := 124;
+    Width  : constant := 124;
     Height : constant := 36;
 
     Shuttle : aliased Entity_T := 
@@ -399,7 +397,7 @@ procedure Simulator is
                                                                                                     "* * *"), Top_Left),
                                                                            1 => new Image_T'(2, 5, ("* * *",
                                                                                                    " * * "), Top_Left)),
-                                                     Current => Anim_Count_T'First),
+                                                      Current => Anim_Count_T'First),
                                 4 => new Color_Map_T'(CM => Colors_Map_T'('|' | '/' | '\' | '-' => Magenta,
                                                                           'o'                   => Green,
                                                                           '*'                   => Yellow,
@@ -434,19 +432,19 @@ procedure Simulator is
                                                                                    others                      => Gray))));
     Stars : Entity_T := (10,
                           Id => "Stars",
-                          Components => (0 => new Image_T'(3, 5, (",,|,,",
-                                                                  "- o -",
-                                                                  ",,|,,"), Center),
-                                         1 => new Color_Map_T'(CM => Colors_Map_T'(others => Gray)),
-                                         2 => new Image_T'(1, 2, (0 => "()"), Center),
-                                         3 => new Color_Map_T'(CM => Colors_Map_T'(others => Gray)),
-                                         4 => new Image_T'(1, 1, (0 => "O"), Center),
-                                         5 => new Color_Map_T'(CM => Colors_Map_T'('O'    => Light_Gray,
-                                                                                   others => Gray)),
-                                         6 => new Image_T'(1, 1, (0 => "+"), Center),
-                                         7 => new Color_Map_T'(CM => Colors_Map_T'(others => White)),
-                                         8 => new Image_T'(1, 1, (0 => "*"), Center),
-                                         9 => new Color_Map_T'(CM => Colors_Map_T'(others => White)),
+                          Components => (0  => new Image_T'(3, 5, (",,|,,",
+                                                                   "- o -",
+                                                                   ",,|,,"), Center),
+                                         1  => new Color_Map_T'(CM => Colors_Map_T'(others => Gray)),
+                                         2  => new Image_T'(1, 2, (0 => "()"), Center),
+                                         3  => new Color_Map_T'(CM => Colors_Map_T'(others => Gray)),
+                                         4  => new Image_T'(1, 1, (0 => "O"), Center),
+                                         5  => new Color_Map_T'(CM => Colors_Map_T'('O'    => Light_Gray,
+                                                                                    others => Gray)),
+                                         6  => new Image_T'(1, 1, (0 => "+"), Center),
+                                         7  => new Color_Map_T'(CM => Colors_Map_T'(others => White)),
+                                         8  => new Image_T'(1, 1, (0 => "*"), Center),
+                                         9  => new Color_Map_T'(CM => Colors_Map_T'(others => White)),
                                          10 => new Random_Stars_T'(Count => 5 * 16, 
                                                                    I     => (others => 1),
                                                                    T     => (others => (X => 0.0, Y => 0.0)))));
@@ -454,7 +452,8 @@ procedure Simulator is
                               Id         => "WndwB",
                               Components => (0 => new Transform_T'(X => 0.0, Y => 0.0),
                                              1 => new Box_T'(Box_Map => (Top => '_', Bottom => ' ', Left => '|', Right => '|'),
-                                                             H => Height, W => Width),
+                                                             H       => Height, 
+                                                             W       => Width),
                                              2 => new Color_Map_T'(CM => Colors_Map_T'('|' | '_' => White,
                                                                                        others    => Gray))));
     Title : Entity_T := (2, Id => "Title",
@@ -490,10 +489,10 @@ procedure Simulator is
                        Dt   : Duration; 
                        E    : in out Entity_T; 
                        ES   : Entities_T := Entities_T'(1 .. 0 => null)) is
-        T renames Transform_T (E.Get_Components (Transform_T'Tag)(0).all);
-        CM renames Color_Map_T (E.Get_Components (Color_Map_T'Tag)(0).all);
+        T  renames Transform_T  (E.Get_Components (Transform_T'Tag)(0).all);
+        CM renames Color_Map_T  (E.Get_Components (Color_Map_T'Tag)(0).all);
         PI renames Proc_Image_T (E.Get_Components (Proc_Image_T'Tag)(0).all);
-        FB renames PImage_T (ES(0).Get_Components (PImage_T'Tag)(0).all);
+        FB renames PImage_T     (ES(0).Get_Components (PImage_T'Tag)(0).all);
 
         function Line (LS : Natural; P : Natural; W: Natural) return Char_Image_T is
             use Ada.Strings.Fixed;
@@ -537,8 +536,8 @@ procedure Simulator is
     Start : Time := Clock;
 begin
     declare
-        S renames Shuttle_Controls_T (Shuttle.Get_Components (Shuttle_Controls_T'Tag)(0).all);
-        FB renames PImage_T (Frame_Buffer.Get_Components (PImage_T'Tag)(0).all);
+        S  renames Shuttle_Controls_T (Shuttle.Get_Components (Shuttle_Controls_T'Tag)(0).all);
+        FB renames PImage_T           (Frame_Buffer.Get_Components (PImage_T'Tag)(0).all);
     begin
         for Idx in Sequence_Idx_T'Range loop
             S.Idx := Idx;
